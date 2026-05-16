@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Topolojik Dönüşüm Laboratuvarı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -10,9 +10,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;700&display=swap');
         
         :root {
-            --panel-bg: rgba(15, 23, 42, 0.85);
+            --panel-bg: rgba(15, 23, 42, 0.9);
             --accent-blue: #3b82f6;
-            --accent-purple: #a855f7;
         }
 
         body { 
@@ -21,81 +20,90 @@
             color: #f8fafc; 
             margin: 0; 
             overflow: hidden; 
+            touch-action: none; /* Prevents default touch gestures from interfering with 3D */
         }
 
         .glass-panel {
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(16px);
             background: var(--panel-bg);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         }
 
         .btn-active {
             background: var(--accent-blue) !important;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
             border-color: #60a5fa !important;
         }
 
+        /* Custom slider appearance for better touch targets */
         input[type=range] {
             -webkit-appearance: none;
             background: #1e293b;
-            height: 6px;
-            border-radius: 3px;
+            height: 10px;
+            border-radius: 5px;
         }
 
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
+            height: 24px;
+            width: 24px;
             border-radius: 50%;
             background: var(--accent-blue);
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            border: 2px solid white;
         }
 
         .edge-label {
             font-family: 'Fira Code', monospace;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
 
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #10b981;
+        /* Mobile specific bottom sheet layout */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                flex-direction: column;
+            }
+            .controls-container {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                border-radius: 24px 24px 0 0;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
         }
     </style>
 </head>
-<body class="h-screen w-screen">
+<body class="h-screen w-screen flex flex-col md:block">
 
-    <header class="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-none">
-        <div class="pointer-events-auto">
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+    <header class="p-4 md:p-6 flex flex-col md:flex-row justify-between items-center z-20 gap-4 md:absolute md:top-0 md:left-0 md:w-full pointer-events-none">
+        <div class="pointer-events-auto text-center md:text-left">
+            <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Topolojik Yüzeyler
             </h1>
-            <p class="text-slate-400 text-sm">Dikdörtgenden Form Oluşturma Simülasyonu</p>
         </div>
 
-        <div class="flex gap-3 pointer-events-auto">
-            <button onclick="changeShape('cylinder')" id="btn-cylinder" class="px-4 py-2 rounded-full glass-panel text-sm transition-all hover:border-blue-500">Silindir</button>
-            <button onclick="changeShape('mobius')" id="btn-mobius" class="px-4 py-2 rounded-full glass-panel text-sm transition-all hover:border-blue-500">Möbius Şeridi</button>
-            <button onclick="changeShape('torus')" id="btn-torus" class="px-4 py-2 rounded-full glass-panel text-sm transition-all hover:border-blue-500">Torus</button>
-            <button onclick="changeShape('klein')" id="btn-klein" class="px-4 py-2 rounded-full glass-panel text-sm transition-all hover:border-blue-500">Klein Şişesi</button>
+        <div class="flex flex-wrap justify-center gap-2 pointer-events-auto">
+            <button onclick="changeShape('cylinder')" id="btn-cylinder" class="px-3 py-1.5 md:px-4 md:py-2 rounded-full glass-panel text-xs md:text-sm transition-all">Silindir</button>
+            <button onclick="changeShape('mobius')" id="btn-mobius" class="px-3 py-1.5 md:px-4 md:py-2 rounded-full glass-panel text-xs md:text-sm transition-all">Möbius</button>
+            <button onclick="changeShape('torus')" id="btn-torus" class="px-3 py-1.5 md:px-4 md:py-2 rounded-full glass-panel text-xs md:text-sm transition-all">Torus</button>
+            <button onclick="changeShape('klein')" id="btn-klein" class="px-3 py-1.5 md:px-4 md:py-2 rounded-full glass-panel text-xs md:text-sm transition-all">Klein</button>
         </div>
     </header>
 
-    <main id="canvas-container" class="w-full h-full"></main>
+    <main id="canvas-container" class="flex-grow w-full h-full absolute inset-0"></main>
 
-    <aside class="absolute left-6 top-28 w-80 flex flex-col gap-4 z-10">
-        <div class="glass-panel p-6 rounded-3xl">
-            <h2 id="shape-title" class="text-xl font-bold text-blue-400 mb-2">Yüzey Seçin</h2>
-            <p id="shape-desc" class="text-sm text-slate-300 leading-relaxed mb-6">
-                Lütfen yukarıdan bir topolojik form seçin.
-            </p>
+    <aside class="controls-container glass-panel p-4 md:p-6 md:absolute md:left-6 md:top-28 md:w-80 md:rounded-3xl z-10 flex flex-col gap-4">
+        
+        <!-- Shape Info (Hidden or Compact on small mobile if needed, but here responsive) -->
+        <div class="hidden md:block">
+            <h2 id="shape-title" class="text-lg font-bold text-blue-400 mb-1">Yüzey Seçin</h2>
+            <p id="shape-desc" class="text-xs text-slate-300 leading-relaxed mb-4">Lütfen yukarıdan bir topolojik form seçin.</p>
             
-            <div class="relative w-full aspect-video glass-panel rounded-xl flex items-center justify-center overflow-hidden bg-black/40 border border-slate-700">
-                <!-- Temel Poligon Diyagramı -->
-                <div id="rect-diag" class="w-40 h-24 border-2 border-dashed border-white/30 relative flex items-center justify-center">
-                    <span class="text-[10px] text-slate-500">BAŞLANGIÇ DİKDÖRTGENİ</span>
-                    <!-- Kenar Okları -->
+            <div class="relative w-full aspect-[2/1] glass-panel rounded-xl flex items-center justify-center overflow-hidden bg-black/40 border border-slate-700">
+                <div id="rect-diag" class="w-32 h-16 border border-dashed border-white/30 relative flex items-center justify-center">
+                    <span class="text-[8px] text-slate-500">POLİGON ŞEMASI</span>
                     <div id="edge-top" class="absolute -top-3 left-1/2 -translate-x-1/2 text-emerald-400 edge-label"></div>
                     <div id="edge-bottom" class="absolute -bottom-4 left-1/2 -translate-x-1/2 text-emerald-400 edge-label"></div>
                     <div id="edge-left" class="absolute top-1/2 -left-4 -translate-y-1/2 text-amber-400 edge-label"></div>
@@ -104,22 +112,23 @@
             </div>
         </div>
 
-        <div class="glass-panel p-6 rounded-3xl">
-            <div class="flex items-center justify-between mb-4">
-                <span class="text-sm font-semibold">Dönüşüm İlerlemesi</span>
-                <span id="percent-label" class="text-xs text-blue-400">0%</span>
+        <!-- Progress and Auto Toggle -->
+        <div class="w-full">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Dönüşüm</span>
+                <span id="percent-label" class="text-sm font-bold text-blue-400">0%</span>
             </div>
-            <input type="range" id="morph-slider" min="0" max="1" step="0.001" value="0" class="w-full cursor-pointer">
+            <input type="range" id="morph-slider" min="0" max="1" step="0.001" value="0" class="w-full cursor-pointer mb-4">
             
-            <div class="mt-6 flex items-center justify-between">
+            <div class="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/10">
                 <div class="flex flex-col">
-                    <span class="text-xs font-bold text-slate-400">OTOMATİK OLUŞTUR</span>
-                    <span class="text-[10px] text-slate-500">Şekil tamamlanınca durur</span>
+                    <span class="text-xs font-bold text-slate-200">OTOMATİK OLUŞTUR</span>
+                    <span class="text-[9px] text-slate-400">Tamamlanınca durur</span>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="auto-jump-toggle" class="sr-only toggle-checkbox">
-                    <div class="w-11 h-6 bg-slate-700 rounded-full toggle-label transition-colors"></div>
-                    <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+                    <input type="checkbox" id="auto-jump-toggle" class="sr-only">
+                    <div class="w-12 h-6 bg-slate-700 rounded-full transition-colors peer-checked:bg-emerald-500"></div>
+                    <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-6"></div>
                 </label>
             </div>
         </div>
@@ -129,25 +138,25 @@
         const SHAPES = {
             cylinder: {
                 title: "Silindir",
-                desc: "Dikdörtgenin bir çift karşılıklı kenarının (sağ-sol) bükülmeden aynı yönde yapıştırılmasıyla elde edilir.",
+                desc: "Karşılıklı iki kenarın aynı yönde (↑ ↑) yapıştırılmasıyla oluşur.",
                 edges: { t: '', b: '', l: '↑', r: '↑' },
                 color: 0x3b82f6
             },
             mobius: {
                 title: "Möbius Şeridi",
-                desc: "Dikdörtgenin bir çift karşılıklı kenarının (sağ-sol) ters yönde (bir uç diğerine bükülerek) yapıştırılmasıyla elde edilir.",
+                desc: "Karşılıklı iki kenarın ters yönde (↑ ↓) bükülerek yapıştırılmasıyla oluşur.",
                 edges: { t: '', b: '', l: '↑', r: '↓' },
                 color: 0x10b981
             },
             torus: {
                 title: "Torus (Simit)",
-                desc: "İki karşılıklı kenar çiftinin de (alt-üst ve sağ-sol) bükülmeden aynı yönde yapıştırılmasıyla elde edilir.",
+                desc: "Her iki karşılıklı kenar çiftinin de aynı yönde yapıştırılmasıyla oluşur.",
                 edges: { t: '→', b: '→', l: '↑', r: '↑' },
                 color: 0xf59e0b
             },
             klein: {
                 title: "Klein Şişesi",
-                desc: "Bir çift karşılıklı kenarın (sağ-sol) bükülmeden aynı yönde, diğer çiftin (alt-üst) ise ters yönde yapıştırılmasıyla elde edilir.",
+                desc: "Bir çift aynı yönde, diğer çift ise ters yönde (→ ←) yapıştırılır.",
                 edges: { t: '→', b: '←', l: '↑', r: '↑' },
                 color: 0x8b5cf6
             }
@@ -156,9 +165,8 @@
         let scene, camera, renderer, mesh, geometry;
         let morphProgress = 0;
         let currentShapeKey = 'cylinder';
-        let isAutoAnimate = false; // Changed from isAutoJump
-        let autoStep = 0.005;
-        let animationDirection = 1; // To handle back and forth animation
+        let isAutoAnimate = false;
+        let autoStep = 0.006;
 
         function init() {
             scene = new THREE.Scene();
@@ -169,13 +177,13 @@
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
-            const pointLight = new THREE.PointLight(0xffffff, 0.8);
+            const pointLight = new THREE.PointLight(0xffffff, 1);
             pointLight.position.set(5, 5, 5);
             scene.add(pointLight);
 
@@ -188,18 +196,18 @@
         function setupGeometry() {
             const width = 3.5;
             const height = 2;
-            const segments = 100;
+            const segments = 80; // Optimized for mobile
             geometry = new THREE.PlaneGeometry(width, height, segments, segments);
             
-            // Texture with grid and arrows to show continuity
+            // Grid texture for continuity visualization
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 512;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 512, 512);
             ctx.strokeStyle = '#cbd5e1';
-            ctx.lineWidth = 2;
-            for(let i=0; i<=512; i+=32) {
+            ctx.lineWidth = 4;
+            for(let i=0; i<=512; i+=64) {
                 ctx.moveTo(i,0); ctx.lineTo(i,512);
                 ctx.moveTo(0,i); ctx.lineTo(512,i);
             }
@@ -209,18 +217,16 @@
             const material = new THREE.MeshPhongMaterial({ 
                 map: texture, 
                 side: THREE.DoubleSide,
-                shininess: 80
+                shininess: 60
             });
 
             mesh = new THREE.Mesh(geometry, material);
             scene.add(mesh);
             
-            // Save original positions
             geometry.userData.orig = geometry.attributes.position.array.slice();
         }
 
         function getTargetPos(u, v, shape) {
-            // u, v are 0 to 1
             let x, y, z;
             const PI = Math.PI;
 
@@ -233,7 +239,7 @@
                     break;
                 case 'mobius':
                     const rMob = 1.2;
-                    const w = (v - 0.5) * 0.8;
+                    const w = (v - 0.5) * 1.0;
                     x = (rMob + w * Math.cos(u * PI)) * Math.cos(u * 2 * PI);
                     y = (rMob + w * Math.cos(u * PI)) * Math.sin(u * 2 * PI);
                     z = w * Math.sin(u * PI);
@@ -245,14 +251,13 @@
                     z = r * Math.sin(v * 2 * PI);
                     break;
                 case 'klein':
-                    // Figure-8 Immersion formula
-                    const a = 1.5;
+                    const a = 1.4;
                     const uA = u * 2 * PI;
                     const vA = v * 2 * PI;
                     x = (a + Math.cos(uA/2)*Math.sin(vA) - Math.sin(uA/2)*Math.sin(2*vA)) * Math.cos(uA);
                     y = (a + Math.cos(uA/2)*Math.sin(vA) - Math.sin(uA/2)*Math.sin(2*vA)) * Math.sin(uA);
                     z = Math.sin(uA/2)*Math.sin(vA) + Math.cos(uA/2)*Math.sin(2*vA);
-                    x *= 0.7; y *= 0.7; z *= 0.7; // Scaling
+                    x *= 0.7; y *= 0.7; z *= 0.7;
                     break;
             }
             return {x, y, z};
@@ -264,17 +269,13 @@
             const t = morphProgress;
 
             for (let i = 0; i < pos.length; i += 3) {
-                // Original plane coordinates
                 const ox = orig[i];
                 const oy = orig[i+1];
-                
-                // Map to 0-1
                 const u = (ox + 1.75) / 3.5;
                 const v = (oy + 1) / 2;
 
                 const target = getTargetPos(u, v, currentShapeKey);
 
-                // Interpolate
                 pos[i] = ox * (1 - t) + target.x * t;
                 pos[i+1] = oy * (1 - t) + target.y * t;
                 pos[i+2] = target.z * t;
@@ -291,13 +292,13 @@
             currentShapeKey = key;
             const info = SHAPES[key];
             
-            // UI Update
+            // UI Updates
             document.getElementById('shape-title').innerText = info.title;
             document.getElementById('shape-desc').innerText = info.desc;
             document.querySelectorAll('button').forEach(b => b.classList.remove('btn-active'));
-            document.getElementById('btn-' + key).classList.add('btn-active');
+            const btn = document.getElementById('btn-' + key);
+            if(btn) btn.classList.add('btn-active');
             
-            // Edge Labels Update
             document.getElementById('edge-top').innerText = info.edges.t;
             document.getElementById('edge-bottom').innerText = info.edges.b;
             document.getElementById('edge-left').innerText = info.edges.l;
@@ -305,8 +306,10 @@
 
             mesh.material.color.setHex(info.color);
             
-            // Reset animation
+            // Reset state
             morphProgress = 0;
+            isAutoAnimate = false;
+            document.getElementById('auto-jump-toggle').checked = false;
             updateMorph();
         }
 
@@ -314,55 +317,20 @@
             requestAnimationFrame(animate);
 
             if (isAutoAnimate) {
-                // Progress moves forward only
                 morphProgress += autoStep;
-                
                 if (morphProgress >= 1) {
                     morphProgress = 1;
-                    isAutoAnimate = false; // Stop when finished
-                    
-                    // Update UI state to reflect it's stopped
-                    const toggle = document.getElementById('auto-jump-toggle');
-                    toggle.checked = false;
-                    const dot = document.querySelector('.dot');
-                    dot.style.transform = 'translateX(0)';
+                    isAutoAnimate = false;
+                    document.getElementById('auto-jump-toggle').checked = false;
                 }
-                
                 updateMorph();
             }
 
+            // Smooth rotation
             mesh.rotation.y += 0.005;
             mesh.rotation.x += 0.002;
             
             renderer.render(scene, camera);
-        }
-
-        function changeShape(key) {
-            currentShapeKey = key;
-            const info = SHAPES[key];
-            
-            // UI Update
-            document.getElementById('shape-title').innerText = info.title;
-            document.getElementById('shape-desc').innerText = info.desc;
-            document.querySelectorAll('button').forEach(b => b.classList.remove('btn-active'));
-            const btn = document.getElementById('btn-' + key);
-            if(btn) btn.classList.add('btn-active');
-            
-            // Edge Labels Update
-            document.getElementById('edge-top').innerText = info.edges.t;
-            document.getElementById('edge-bottom').innerText = info.edges.b;
-            document.getElementById('edge-left').innerText = info.edges.l;
-            document.getElementById('edge-right').innerText = info.edges.r;
-
-            mesh.material.color.setHex(info.color);
-            
-            // Reset state: Always start from rectangle when switching
-            morphProgress = 0;
-            isAutoAnimate = false;
-            document.getElementById('auto-jump-toggle').checked = false;
-            document.querySelector('.dot').style.transform = 'translateX(0)';
-            
-            updateMorph();
         }
 
         function onWindowResize() {
@@ -374,31 +342,21 @@
         document.getElementById('morph-slider').addEventListener('input', (e) => {
             isAutoAnimate = false;
             document.getElementById('auto-jump-toggle').checked = false;
-            document.querySelector('.dot').style.transform = 'translateX(0)';
             morphProgress = parseFloat(e.target.value);
             updateMorph();
         });
 
         document.getElementById('auto-jump-toggle').addEventListener('change', (e) => {
             isAutoAnimate = e.target.checked;
-            const dot = document.querySelector('.dot');
-            if(isAutoAnimate) {
-                // If user clicks start while at 100%, reset to 0 first
-                if (morphProgress >= 1) {
-                    morphProgress = 0;
-                }
-                dot.style.transform = 'translateX(1.25rem)';
-            } else {
-                dot.style.transform = 'translateX(0)';
+            if(isAutoAnimate && morphProgress >= 1) {
+                morphProgress = 0;
             }
         });
 
-        // Initialize with cylinder
         window.onload = () => {
             init();
             changeShape('cylinder');
         };
-
     </script>
 </body>
 </html>
